@@ -107,3 +107,14 @@ class MAX17048:
             raise ValueError("Activity voltage change must be between 0 and 0.31875 Volts")
         self._hibrt_actthr  = int(threshold_voltage / 0.00125) # 1.25mV per LSB
 
+
+    @property
+    def hibernation_threshold(self):
+        return self._hibrt_hibthr * 0.208  # 0.208% per hour
+
+    @hibernation_threshold.setter
+    def hibernation_threshold(self, threshold_percent):
+        if (not 0 <= threshold_percent <= (255 * 0.208)):
+            raise ValueError("Activity percentage/hour change must be between 0 and 53%")
+        self._hibrt_hibthr  = int(threshold_percent / 0.208)  # 0.208% per hour
+

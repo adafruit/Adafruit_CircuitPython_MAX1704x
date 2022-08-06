@@ -16,8 +16,11 @@ max17 = adafruit_max1704x.MAX17048(debug_i2c)
 
 print("Found MAX1704x with chip version", hex(max17.chip_version))
 
-max17.activity_threshold = 0.1
-print("MAX1704x activity threshold = %0.2f V" % max17.activity_threshold)
+#max17.activity_threshold = 0.15
+#print("MAX1704x activity threshold = %0.2f V" % max17.activity_threshold)
+
+max17.hibernation_threshold = 5
+print("MAX1704x hibernation threshold = %0.2f %%" % max17.hibernation_threshold)
 
 
 while True:
