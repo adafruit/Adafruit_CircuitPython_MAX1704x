@@ -31,6 +31,7 @@ from micropython import const
 from adafruit_bus_device import i2c_device
 from adafruit_register.i2c_struct import ROUnaryStruct, UnaryStruct
 from adafruit_register.i2c_bit import RWBit, ROBit
+from adafruit_register.i2c_bits import RWBits
 
 __version__ = "0.0.0-auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_MAX1704x.git"
@@ -64,17 +65,22 @@ class MAX17048:
     """
 
     chip_version = ROUnaryStruct(_MAX1704X_VERSION_REG, ">H")
+    chip_id = ROUnaryStruct(_MAX1704X_CHIPID_REG, ">B")
+
     _config = ROUnaryStruct(_MAX1704X_CONFIG_REG, ">H")
     # expose the config bits
     sleep = RWBit(_MAX1704X_CONFIG_REG+1, 7, register_width=2, lsb_first=False)
     _alert_status = RWBit(_MAX1704X_CONFIG_REG+1, 5, register_width=2, lsb_first=False)
     enable_sleep = RWBit(_MAX1704X_MODE_REG, 5)
     hibernating = ROBit(_MAX1704X_MODE_REG, 4)
+    quick_start = RWBit(_MAX1704X_MODE_REG, 6)
 
     _cmd = UnaryStruct(_MAX1704X_CMD_REG, ">H")
     _status = ROUnaryStruct(_MAX1704X_STATUS_REG, ">B")
     _cell_voltage = ROUnaryStruct(_MAX1704X_VCELL_REG, ">H")
-    _cell_SOC = ROUnaryStruct(_MAX1704X_SOC_REG, ">B")
+    _cell_SOC = ROUnaryStruct(_MAX1704X_SOC_REG, ">H")
+    _cell_crate = ROUnaryStruct(_MAX1704X_CRATE_REG, ">h")
+    _vreset = ROUnaryStruct(_MAX1704X_VRESET_REG, ">B")
     _hibrt_actthr = UnaryStruct(_MAX1704X_HIBRT_REG+1, ">B")
     _hibrt_hibthr = UnaryStruct(_MAX1704X_HIBRT_REG, ">B")
     _valrt_min = UnaryStruct(_MAX1704X_VALERT_REG, ">B")
@@ -88,8 +94,8 @@ class MAX17048:
     SOC_low_alert = RWBit(_MAX1704X_STATUS_REG, 4)
     SOC_change_alert = RWBit(_MAX1704X_STATUS_REG, 5)
 
-    chip_id = ROUnaryStruct(_MAX1704X_CHIPID_REG, ">B")
-    
+    _reset_voltage = RWBits(7, _MAX1704X_VRESET_REG, 1)
+
     def __init__(self, i2c_bus, address=MAX1704X_I2CADDR_DEFAULT):
         # pylint: disable=no-member
         self.i2c_device = i2c_device.I2CDevice(i2c_bus, address)
@@ -116,8 +122,22 @@ class MAX17048:
 
     @property
     def cell_percent(self):
-        return self._cell_SOC
+        return self._cell_SOC / 256.0
 
+    @property
+    def charge_rate(self):
+        """Charge or discharge rate of the battery in percent/hour"""
+        return self._cell_crate * 0.208 
+
+    @property
+    def reset_voltage(self):
+        return self._reset_voltage * .04 # 40mV / LSB
+
+    @reset_voltage.setter
+    def reset_voltage(self, reset_v):
+        if (not 0 <= reset_v <= (127 * 0.04)):
+            raise ValueError("Reset voltage must be between 0 and 5.1 Volts")
+        self._reset_voltage = int(reset_v / .04) # 40mV / LSB
 
     @property
     def voltage_alert_min(self):

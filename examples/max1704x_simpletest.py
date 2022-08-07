@@ -14,7 +14,10 @@ from adafruit_debug_i2c import DebugI2C
 debug_i2c = DebugI2C(i2c)
 max17 = adafruit_max1704x.MAX17048(debug_i2c)
 
-print("Found MAX1704x with chip version", hex(max17.chip_version))
+print("Found MAX1704x with chip version", hex(max17.chip_version), "and id", hex(max17.chip_id))
+
+#max17.reset_voltage = 2.5
+print("MAX1704x reset voltage = %0.1f V" % max17.reset_voltage)
 
 #max17.activity_threshold = 0.15
 #print("MAX1704x activity threshold = %0.2f V" % max17.activity_threshold)
@@ -27,6 +30,9 @@ print("Found MAX1704x with chip version", hex(max17.chip_version))
 #max17.enable_sleep = True
 #max17.sleep = True
 
+print("Quick starting")
+max17.quick_start = True
+
 max17.voltage_alert_min = 3.7
 print("Voltage alert minimum = %0.2f V" % max17.voltage_alert_min)
 #max17.voltage_alert_max = 3.8
@@ -35,6 +41,7 @@ print("Voltage alert minimum = %0.2f V" % max17.voltage_alert_min)
 while True:
     print("Battery voltage:", max17.cell_voltage, "V")
     print("Battery state  :", max17.cell_percent, "%")
+    print("Charge rate  :", max17.charge_rate, "%/hr")
 
     if max17.hibernating:
         print("Hibernating!")
