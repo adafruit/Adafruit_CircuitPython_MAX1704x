@@ -26,7 +26,6 @@ Implementation Notes
 * Adafruit's Register library: https://github.com/adafruit/Adafruit_CircuitPython_Register
 """
 
-import time
 from micropython import const
 from adafruit_bus_device import i2c_device
 from adafruit_register.i2c_struct import ROUnaryStruct, UnaryStruct
@@ -58,6 +57,7 @@ ALERTFLAG_VOLTAGE_LOW = 0x04
 ALERTFLAG_VOLTAGE_HIGH = 0x02
 ALERTFLAG_RESET_INDICATOR = 0x01
 
+
 class MAX17048:
     """Driver for the MAX1704X battery fuel gauge.
     :param ~busio.I2C i2c_bus: The I2C bus the MAX1704X is connected to.
@@ -69,8 +69,10 @@ class MAX17048:
 
     _config = ROUnaryStruct(_MAX1704X_CONFIG_REG, ">H")
     # expose the config bits
-    sleep = RWBit(_MAX1704X_CONFIG_REG+1, 7, register_width=2, lsb_first=False)
-    _alert_status = RWBit(_MAX1704X_CONFIG_REG+1, 5, register_width=2, lsb_first=False)
+    sleep = RWBit(_MAX1704X_CONFIG_REG + 1, 7, register_width=2, lsb_first=False)
+    _alert_status = RWBit(
+        _MAX1704X_CONFIG_REG + 1, 5, register_width=2, lsb_first=False
+    )
     enable_sleep = RWBit(_MAX1704X_MODE_REG, 5)
     hibernating = ROBit(_MAX1704X_MODE_REG, 4)
     quick_start = RWBit(_MAX1704X_MODE_REG, 6)
@@ -81,10 +83,10 @@ class MAX17048:
     _cell_SOC = ROUnaryStruct(_MAX1704X_SOC_REG, ">H")
     _cell_crate = ROUnaryStruct(_MAX1704X_CRATE_REG, ">h")
     _vreset = ROUnaryStruct(_MAX1704X_VRESET_REG, ">B")
-    _hibrt_actthr = UnaryStruct(_MAX1704X_HIBRT_REG+1, ">B")
+    _hibrt_actthr = UnaryStruct(_MAX1704X_HIBRT_REG + 1, ">B")
     _hibrt_hibthr = UnaryStruct(_MAX1704X_HIBRT_REG, ">B")
     _valrt_min = UnaryStruct(_MAX1704X_VALERT_REG, ">B")
-    _valrt_max = UnaryStruct(_MAX1704X_VALERT_REG+1, ">B")
+    _valrt_max = UnaryStruct(_MAX1704X_VALERT_REG + 1, ">B")
 
     # expose the alert bits
     reset_alert = RWBit(_MAX1704X_STATUS_REG, 0)
@@ -108,88 +110,100 @@ class MAX17048:
         self.sleep = False
 
     def reset(self):
+        """Perform a soft reset of the chip"""
         try:
-            self._cmd = 0x5400    
+            self._cmd = 0x5400
         except OSError:
             # aha! we NACKed, which is CORRECT!
             pass
         else:
             raise RuntimeError("Reset did not succeed")
-        self.reset_alert = False # clean up RI alert
+        self.reset_alert = False  # clean up RI alert
 
     @property
     def cell_voltage(self):
+        """The state of charge of the battery, in volts"""
         return self._cell_voltage * 78.125 / 1_000_000
 
     @property
     def cell_percent(self):
+        """The state of charge of the battery, in percentage of 'fullness'"""
         return self._cell_SOC / 256.0
 
     @property
     def charge_rate(self):
         """Charge or discharge rate of the battery in percent/hour"""
-        return self._cell_crate * 0.208 
+        return self._cell_crate * 0.208
 
     @property
     def reset_voltage(self):
-        return self._reset_voltage * .04 # 40mV / LSB
+        """The voltage that will determine whether the chip will consider it a reset/swap"""
+        return self._reset_voltage * 0.04  # 40mV / LSB
 
     @reset_voltage.setter
     def reset_voltage(self, reset_v):
-        if (not 0 <= reset_v <= (127 * 0.04)):
+        if not 0 <= reset_v <= (127 * 0.04):
             raise ValueError("Reset voltage must be between 0 and 5.1 Volts")
-        self._reset_voltage = int(reset_v / .04) # 40mV / LSB
+        self._reset_voltage = int(reset_v / 0.04)  # 40mV / LSB
 
     @property
     def voltage_alert_min(self):
-        return self._valrt_min * .02 # 20mV / LSB
+        """The lower-limit voltage for the voltage alert"""
+        return self._valrt_min * 0.02  # 20mV / LSB
 
     @voltage_alert_min.setter
     def voltage_alert_min(self, minvoltage):
-        if (not 0 <= minvoltage <= (255 * 0.02)):
+        if not 0 <= minvoltage <= (255 * 0.02):
             raise ValueError("Alert voltage must be between 0 and 5.1 Volts")
-        self._valrt_min = int(minvoltage / .02) # 20mV / LSB
+        self._valrt_min = int(minvoltage / 0.02)  # 20mV / LSB
 
     @property
     def voltage_alert_max(self):
-        return self._valrt_max * .02 # 20mV / LSB
+        """The upper-limit voltage for the voltage alert"""
+        return self._valrt_max * 0.02  # 20mV / LSB
 
     @voltage_alert_max.setter
     def voltage_alert_max(self, maxvoltage):
-        if (not 0 <= maxvoltage <= (255 * 0.02)):
+        if not 0 <= maxvoltage <= (255 * 0.02):
             raise ValueError("Alert voltage must be between 0 and 5.1 Volts")
-        self._valrt_max = int(maxvoltage / .02) # 20mV / LSB
+        self._valrt_max = int(maxvoltage / 0.02)  # 20mV / LSB
 
     @property
     def active_alert(self):
+        """Whether there is an active alert to be checked"""
         return self._alert_status
 
     @property
     def alert_reason(self):
+        """The 7 bits of alert-status that can be checked at once for flags"""
         return self._status & 0x3F
-
 
     @property
     def activity_threshold(self):
+        """The absolute change in battery voltage that will trigger hibernation"""
         return self._hibrt_actthr * 0.00125  # 1.25mV per LSB
 
     @activity_threshold.setter
     def activity_threshold(self, threshold_voltage):
-        if (not 0 <= threshold_voltage <= (255 * 0.00125)):
-            raise ValueError("Activity voltage change must be between 0 and 0.31875 Volts")
-        self._hibrt_actthr  = int(threshold_voltage / 0.00125) # 1.25mV per LSB
-
+        if not 0 <= threshold_voltage <= (255 * 0.00125):
+            raise ValueError(
+                "Activity voltage change must be between 0 and 0.31875 Volts"
+            )
+        self._hibrt_actthr = int(threshold_voltage / 0.00125)  # 1.25mV per LSB
 
     @property
     def hibernation_threshold(self):
+        """The absolute-value percent-per-hour change in charge rate
+        that will trigger hibernation"""
         return self._hibrt_hibthr * 0.208  # 0.208% per hour
 
     @hibernation_threshold.setter
     def hibernation_threshold(self, threshold_percent):
-        if (not 0 <= threshold_percent <= (255 * 0.208)):
-            raise ValueError("Activity percentage/hour change must be between 0 and 53%")
-        self._hibrt_hibthr  = int(threshold_percent / 0.208)  # 0.208% per hour
-
+        if not 0 <= threshold_percent <= (255 * 0.208):
+            raise ValueError(
+                "Activity percentage/hour change must be between 0 and 53%"
+            )
+        self._hibrt_hibthr = int(threshold_percent / 0.208)  # 0.208% per hour
 
     def hibernate(self):
         """Setup thresholds for hibernation to go into hibernation mode immediately.
@@ -204,5 +218,3 @@ class MAX17048:
         always use hibernate mode, set HIBRT = 0xFFFF. Can check status with `self.hibernating`"""
         self._hibrt_hibthr = 0
         self._hibrt_actthr = 0
-
-
