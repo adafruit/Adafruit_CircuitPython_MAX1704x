@@ -95,6 +95,7 @@ class MAX17048:
     SOC_change_alert = RWBit(_MAX1704X_STATUS_REG, 5)
 
     _reset_voltage = RWBits(7, _MAX1704X_VRESET_REG, 1)
+    comparator_disabled = RWBit(_MAX1704X_VRESET_REG, 0)
 
     def __init__(self, i2c_bus, address=MAX1704X_I2CADDR_DEFAULT):
         # pylint: disable=no-member
