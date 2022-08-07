@@ -198,7 +198,7 @@ class MAX17048:
         self._hibrt_hibthr = 0xFF
         self._hibrt_actthr = 0xFF
 
-    def disable_hibernation(self):
+    def wake(self):
         """Setup thresholds for hibernation to leave hibernation mode immediately.
         See datasheet: HIBRT Register (0x0A) To disable hibernate mode, set HIBRT = 0x0000. To
         always use hibernate mode, set HIBRT = 0xFFFF. Can check status with `self.hibernating`"""
