@@ -16,7 +16,7 @@ Implementation Notes
 
 **Hardware:**
 
-* `Adafruit MAX17048 Battery Fuel Gauge <https://www.adafruit.com/product/5580>`
+* `Adafruit MAX17048 Battery Fuel Gauge <https://www.adafruit.com/product/5580>`_
 
 **Software and Dependencies:**
 
@@ -207,14 +207,16 @@ class MAX17048:
 
     def hibernate(self):
         """Setup thresholds for hibernation to go into hibernation mode immediately.
+
         See datasheet: HIBRT Register (0x0A) To disable hibernate mode, set HIBRT = 0x0000. To
-        always use hibernate mode, set HIBRT = 0xFFFF. Can check status with `self.hibernating`"""
+        always use hibernate mode, set HIBRT = 0xFFFF. Can check status with :py:attr:`hibernating`"""
         self._hibrt_hibthr = 0xFF
         self._hibrt_actthr = 0xFF
 
     def wake(self):
         """Setup thresholds for hibernation to leave hibernation mode immediately.
+
         See datasheet: HIBRT Register (0x0A) To disable hibernate mode, set HIBRT = 0x0000. To
-        always use hibernate mode, set HIBRT = 0xFFFF. Can check status with `self.hibernating`"""
+        always use hibernate mode, set HIBRT = 0xFFFF. Can check status with :py:attr:`hibernating`"""
         self._hibrt_hibthr = 0
         self._hibrt_actthr = 0
