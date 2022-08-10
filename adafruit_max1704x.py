@@ -180,7 +180,7 @@ class MAX17048:
         return self._alert_status
 
     @property
-    def alert_reason(self) -> bool:
+    def alert_reason(self) -> int:
         """The 7 bits of alert-status that can be checked at once for flags"""
         return self._status & 0x3F
 
