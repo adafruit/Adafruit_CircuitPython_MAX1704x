@@ -2,6 +2,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2022 ladyada for Adafruit Industries
 #
 # SPDX-License-Identifier: MIT
+
 """
 `adafruit_max1704x`
 ================================================================================
