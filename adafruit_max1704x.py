@@ -34,7 +34,6 @@ from adafruit_register.i2c_bit import RWBit, ROBit
 from adafruit_register.i2c_bits import RWBits
 
 try:
-    from typing import List, Tuple
     from busio import I2C
 except ImportError:
     pass
