@@ -33,6 +33,11 @@ from adafruit_register.i2c_struct import ROUnaryStruct, UnaryStruct
 from adafruit_register.i2c_bit import RWBit, ROBit
 from adafruit_register.i2c_bits import RWBits
 
+try:
+    from busio import I2C
+except ImportError:
+    pass
+
 __version__ = "0.0.0-auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_MAX1704x.git"
 
@@ -100,7 +105,7 @@ class MAX17048:
     _reset_voltage = RWBits(7, _MAX1704X_VRESET_REG, 1)
     comparator_disabled = RWBit(_MAX1704X_VRESET_REG, 0)
 
-    def __init__(self, i2c_bus, address=MAX1704X_I2CADDR_DEFAULT):
+    def __init__(self, i2c_bus: I2C, address: int = MAX1704X_I2CADDR_DEFAULT) -> None:
         # pylint: disable=no-member
         self.i2c_device = i2c_device.I2CDevice(i2c_bus, address)
 
@@ -110,7 +115,7 @@ class MAX17048:
         self.enable_sleep = False
         self.sleep = False
 
-    def reset(self):
+    def reset(self) -> None:
         """Perform a soft reset of the chip"""
         try:
             self._cmd = 0x5400
@@ -122,70 +127,70 @@ class MAX17048:
         self.reset_alert = False  # clean up RI alert
 
     @property
-    def cell_voltage(self):
+    def cell_voltage(self) -> float:
         """The state of charge of the battery, in volts"""
         return self._cell_voltage * 78.125 / 1_000_000
 
     @property
-    def cell_percent(self):
+    def cell_percent(self) -> float:
         """The state of charge of the battery, in percentage of 'fullness'"""
         return self._cell_SOC / 256.0
 
     @property
-    def charge_rate(self):
+    def charge_rate(self) -> float:
         """Charge or discharge rate of the battery in percent/hour"""
         return self._cell_crate * 0.208
 
     @property
-    def reset_voltage(self):
+    def reset_voltage(self) -> float:
         """The voltage that will determine whether the chip will consider it a reset/swap"""
         return self._reset_voltage * 0.04  # 40mV / LSB
 
     @reset_voltage.setter
-    def reset_voltage(self, reset_v):
+    def reset_voltage(self, reset_v: float) -> None:
         if not 0 <= reset_v <= (127 * 0.04):
             raise ValueError("Reset voltage must be between 0 and 5.1 Volts")
         self._reset_voltage = int(reset_v / 0.04)  # 40mV / LSB
 
     @property
-    def voltage_alert_min(self):
+    def voltage_alert_min(self) -> float:
         """The lower-limit voltage for the voltage alert"""
         return self._valrt_min * 0.02  # 20mV / LSB
 
     @voltage_alert_min.setter
-    def voltage_alert_min(self, minvoltage):
+    def voltage_alert_min(self, minvoltage: float) -> None:
         if not 0 <= minvoltage <= (255 * 0.02):
             raise ValueError("Alert voltage must be between 0 and 5.1 Volts")
         self._valrt_min = int(minvoltage / 0.02)  # 20mV / LSB
 
     @property
-    def voltage_alert_max(self):
+    def voltage_alert_max(self) -> float:
         """The upper-limit voltage for the voltage alert"""
         return self._valrt_max * 0.02  # 20mV / LSB
 
     @voltage_alert_max.setter
-    def voltage_alert_max(self, maxvoltage):
+    def voltage_alert_max(self, maxvoltage: float) -> None:
         if not 0 <= maxvoltage <= (255 * 0.02):
             raise ValueError("Alert voltage must be between 0 and 5.1 Volts")
         self._valrt_max = int(maxvoltage / 0.02)  # 20mV / LSB
 
     @property
-    def active_alert(self):
+    def active_alert(self) -> bool:
         """Whether there is an active alert to be checked"""
         return self._alert_status
 
     @property
-    def alert_reason(self):
+    def alert_reason(self) -> int:
         """The 7 bits of alert-status that can be checked at once for flags"""
         return self._status & 0x3F
 
     @property
-    def activity_threshold(self):
+    def activity_threshold(self) -> float:
         """The absolute change in battery voltage that will trigger hibernation"""
         return self._hibrt_actthr * 0.00125  # 1.25mV per LSB
 
     @activity_threshold.setter
-    def activity_threshold(self, threshold_voltage):
+    def activity_threshold(self, threshold_voltage: float) -> None:
         if not 0 <= threshold_voltage <= (255 * 0.00125):
             raise ValueError(
                 "Activity voltage change must be between 0 and 0.31875 Volts"
@@ -193,20 +198,20 @@ class MAX17048:
         self._hibrt_actthr = int(threshold_voltage / 0.00125)  # 1.25mV per LSB
 
     @property
-    def hibernation_threshold(self):
+    def hibernation_threshold(self) -> float:
         """The absolute-value percent-per-hour change in charge rate
         that will trigger hibernation"""
         return self._hibrt_hibthr * 0.208  # 0.208% per hour
 
     @hibernation_threshold.setter
-    def hibernation_threshold(self, threshold_percent):
+    def hibernation_threshold(self, threshold_percent: float) -> None:
         if not 0 <= threshold_percent <= (255 * 0.208):
             raise ValueError(
                 "Activity percentage/hour change must be between 0 and 53%"
             )
         self._hibrt_hibthr = int(threshold_percent / 0.208)  # 0.208% per hour
 
-    def hibernate(self):
+    def hibernate(self) -> None:
         """Setup thresholds for hibernation to go into hibernation mode immediately.
 
         See datasheet: HIBRT Register (0x0A) To disable hibernate mode, set
@@ -217,7 +222,7 @@ class MAX17048:
         self._hibrt_hibthr = 0xFF
         self._hibrt_actthr = 0xFF
 
-    def wake(self):
+    def wake(self) -> None:
         """Setup thresholds for hibernation to leave hibernation mode immediately.
 
         See datasheet: HIBRT Register (0x0A) To disable hibernate mode, set
