@@ -12,7 +12,7 @@ requires = [
 [project]
 name = "adafruit-circuitpython-max1704x"
 description = "MAX17048 or MAX17049 battery fuel gauge Python/CircuitPython library"
-version = "0.0.0-auto.0"
+version = "0.0.0+auto.0"
 readme = "README.rst"
 authors = [
     {name = "Adafruit Industries", email = "circuitpython@adafruit.com"}

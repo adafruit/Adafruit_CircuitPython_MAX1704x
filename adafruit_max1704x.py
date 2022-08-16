@@ -38,7 +38,7 @@ try:
 except ImportError:
     pass
 
-__version__ = "0.0.0-auto.0"
+__version__ = "0.0.0+auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_MAX1704x.git"
 
 MAX1704X_I2CADDR_DEFAULT: int = const(0x36)  # Default I2C address
