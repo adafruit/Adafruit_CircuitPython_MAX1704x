@@ -7,6 +7,7 @@ import board
 import adafruit_max1704x
 
 i2c = board.I2C()  # uses board.SCL and board.SDA
+# i2c = board.STEMMA_I2C()  # For using the built-in STEMMA QT connector on a microcontroller
 max17 = adafruit_max1704x.MAX17048(i2c)
 
 print(
