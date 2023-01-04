@@ -124,7 +124,16 @@ class MAX17048:
             pass
         else:
             raise RuntimeError("Reset did not succeed")
-        self.reset_alert = False  # clean up RI alert
+        for _ in range(2):
+            try:
+                self.reset_alert = False  # clean up RI alert
+                return
+            except OSError as e:
+                # With CircuitPython 8.0.0-beta.6 and ESP32-S3, the first
+                # attempt to reset the alert fails.
+                continue
+        else:
+            raise RuntimeError("Clearing reset alert did not succeed")
 
     @property
     def cell_voltage(self) -> float:
