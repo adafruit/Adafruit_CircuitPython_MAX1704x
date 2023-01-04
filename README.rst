@@ -87,7 +87,7 @@ following command to install:
 
 .. code-block:: shell
 
-    circup install max1704x
+    circup install adafruit_max1704x
 
 Or the following command to update an existing version:
 
