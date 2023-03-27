@@ -124,7 +124,7 @@ class MAX17048:
             pass
         else:
             raise RuntimeError("Reset did not succeed")
-        for _ in range(2):
+        for _ in range(3):
             try:
                 self.reset_alert = False  # clean up RI alert
                 return
