@@ -75,9 +75,9 @@ class MAX17048:
 
     _config = ROUnaryStruct(_MAX1704X_CONFIG_REG, ">H")
     # expose the config bits
-    sleep = RWBit(_MAX1704X_CONFIG_REG + 1, 7, register_width=2, lsb_first=False)
+    sleep = RWBit(_MAX1704X_CONFIG_REG, 7, register_width=2, lsb_first=False)
     _alert_status = RWBit(
-        _MAX1704X_CONFIG_REG + 1, 5, register_width=2, lsb_first=False
+        _MAX1704X_CONFIG_REG, 5, register_width=2, lsb_first=False
     )
     enable_sleep = RWBit(_MAX1704X_MODE_REG, 5)
     hibernating = ROBit(_MAX1704X_MODE_REG, 4)
