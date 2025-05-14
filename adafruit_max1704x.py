@@ -27,11 +27,11 @@ Implementation Notes
 * Adafruit's Register library: https://github.com/adafruit/Adafruit_CircuitPython_Register
 """
 
-from micropython import const
 from adafruit_bus_device import i2c_device
-from adafruit_register.i2c_struct import ROUnaryStruct, UnaryStruct
-from adafruit_register.i2c_bit import RWBit, ROBit
+from adafruit_register.i2c_bit import ROBit, RWBit
 from adafruit_register.i2c_bits import RWBits
+from adafruit_register.i2c_struct import ROUnaryStruct, UnaryStruct
+from micropython import const
 
 try:
     from busio import I2C
@@ -76,9 +76,7 @@ class MAX17048:
     _config = ROUnaryStruct(_MAX1704X_CONFIG_REG, ">H")
     # expose the config bits
     sleep = RWBit(_MAX1704X_CONFIG_REG + 1, 7, register_width=2, lsb_first=False)
-    _alert_status = RWBit(
-        _MAX1704X_CONFIG_REG + 1, 5, register_width=2, lsb_first=False
-    )
+    _alert_status = RWBit(_MAX1704X_CONFIG_REG + 1, 5, register_width=2, lsb_first=False)
     enable_sleep = RWBit(_MAX1704X_MODE_REG, 5)
     hibernating = ROBit(_MAX1704X_MODE_REG, 4)
     quick_start = RWBit(_MAX1704X_MODE_REG, 6)
@@ -106,7 +104,6 @@ class MAX17048:
     comparator_disabled = RWBit(_MAX1704X_VRESET_REG, 0)
 
     def __init__(self, i2c_bus: I2C, address: int = MAX1704X_I2CADDR_DEFAULT) -> None:
-        # pylint: disable=no-member
         self.i2c_device = i2c_device.I2CDevice(i2c_bus, address)
 
         if self.chip_version & 0xFFF0 != 0x0010:
@@ -200,9 +197,7 @@ class MAX17048:
     @activity_threshold.setter
     def activity_threshold(self, threshold_voltage: float) -> None:
         if not 0 <= threshold_voltage <= (255 * 0.00125):
-            raise ValueError(
-                "Activity voltage change must be between 0 and 0.31875 Volts"
-            )
+            raise ValueError("Activity voltage change must be between 0 and 0.31875 Volts")
         self._hibrt_actthr = int(threshold_voltage / 0.00125)  # 1.25mV per LSB
 
     @property
@@ -214,9 +209,7 @@ class MAX17048:
     @hibernation_threshold.setter
     def hibernation_threshold(self, threshold_percent: float) -> None:
         if not 0 <= threshold_percent <= (255 * 0.208):
-            raise ValueError(
-                "Activity percentage/hour change must be between 0 and 53%"
-            )
+            raise ValueError("Activity percentage/hour change must be between 0 and 53%")
         self._hibrt_hibthr = int(threshold_percent / 0.208)  # 0.208% per hour
 
     def hibernate(self) -> None:
