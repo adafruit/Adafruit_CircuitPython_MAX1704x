@@ -28,7 +28,7 @@ max17.quick_start = True
 # The reset voltage is what the chip considers 'battery has been removed and replaced'
 # The default is 3.0 Volts but you can change it here:
 # max17.reset_voltage = 2.5
-print("MAX1704x reset voltage = %0.1f V" % max17.reset_voltage)
+print(f"MAX1704x reset voltage = {max17.reset_voltage:0.1f} V")
 
 # The analog comparator is used to detect the rest voltage, if you don't think the battery
 # will ever be removed this can reduce current usage (see datasheet on VRESET.Dis)
@@ -41,10 +41,10 @@ else:
 # Hibernation mode reduces how often the ADC is read, for power reduction. There is an automatic
 # enter/exit mode but you can also customize the activity threshold both as voltage and charge rate
 # max17.activity_threshold = 0.15
-print("MAX1704x activity threshold = %0.2f V" % max17.activity_threshold)
+print(f"MAX1704x activity threshold = {max17.activity_threshold:0.2f} V")
 
 # max17.hibernation_threshold = 5
-print("MAX1704x hibernation threshold = %0.2f %%" % max17.hibernation_threshold)
+print(f"MAX1704x hibernation threshold = {max17.hibernation_threshold:0.2f} %")
 
 # You can also 'force' hibernation mode!
 # max17.hibernate()
@@ -54,9 +54,9 @@ print("MAX1704x hibernation threshold = %0.2f %%" % max17.hibernation_threshold)
 # The alert pin can be used to detect when the voltage of the battery goes below or
 # above a voltage, you can also query the alert in the loop.
 max17.voltage_alert_min = 3.5
-print("Voltage alert minimum = %0.2f V" % max17.voltage_alert_min)
+print(f"Voltage alert minimum = {max17.voltage_alert_min:0.2f} V")
 max17.voltage_alert_max = 4.1
-print("Voltage alert maximum = %0.2f V" % max17.voltage_alert_max)
+print(f"Voltage alert maximum = {max17.voltage_alert_max:0.2f} V")
 
 print("")
 while True:
