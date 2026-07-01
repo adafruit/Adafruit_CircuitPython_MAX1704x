@@ -27,6 +27,8 @@ Implementation Notes
 * Adafruit's Register library: https://github.com/adafruit/Adafruit_CircuitPython_Register
 """
 
+import time
+
 from adafruit_bus_device import i2c_device
 from adafruit_register.i2c_bit import ROBit, RWBit
 from adafruit_register.i2c_bits import RWBits
@@ -56,6 +58,12 @@ _MAX1704X_CHIPID_REG = const(0x19)
 _MAX1704X_STATUS_REG = const(0x1A)
 _MAX1704X_CMD_REG = const(0xFE)
 
+# Issue #16 fix
+# Datasheet 19-6171 Rev 7, timings: after a full POR-equivalent reset (CMD=0x5400),
+# the IC needs up to 17ms (OCV ready) + 175ms (SOC ready) = 192ms worst-case before
+# VCELL/SOC reflect a real measurement rather than the power-on sentinel. See reset().
+_MAX1704X_TPOR_MAX = 0.192
+
 ALERTFLAG_SOC_CHANGE = 0x20
 ALERTFLAG_SOC_LOW = 0x10
 ALERTFLAG_VOLTAGE_RESET = 0x08
@@ -71,12 +79,20 @@ class MAX17048:
     """
 
     chip_version = ROUnaryStruct(_MAX1704X_VERSION_REG, ">H")
+    # This is the factory-programmed, one-time-provisioned lot/production ID (datasheet
+    # ID field, low byte of the VRESET/ID register at 0x19) -- NOT a chip/part-number
+    # identifier. It does not distinguish MAX17048 from MAX17049 and should not be used
+    # as a "device present and correct" check; chip_version's masked comparison in
+    # __init__ already serves that purpose.
     chip_id = ROUnaryStruct(_MAX1704X_CHIPID_REG, ">B")
 
     _config = ROUnaryStruct(_MAX1704X_CONFIG_REG, ">H")
     # expose the config bits
-    sleep = RWBit(_MAX1704X_CONFIG_REG + 1, 7, register_width=2, lsb_first=False)
-    _alert_status = RWBit(_MAX1704X_CONFIG_REG + 1, 5, register_width=2, lsb_first=False)
+    # The datasheet requires all registers be written as full 16-bit words --
+    # "8-bit writes cause no effect". The original code anchored at CONFIG_REG + 1
+    # instead of CONFIG_REG, landing one byte past the real register (0x0E).
+    sleep = RWBit(_MAX1704X_CONFIG_REG, 7, register_width=2, lsb_first=False)
+    _alert_status = RWBit(_MAX1704X_CONFIG_REG, 5, register_width=2, lsb_first=False)
     enable_sleep = RWBit(_MAX1704X_MODE_REG, 5)
     hibernating = ROBit(_MAX1704X_MODE_REG, 4)
     quick_start = RWBit(_MAX1704X_MODE_REG, 6)
@@ -121,6 +137,11 @@ class MAX17048:
             pass
         else:
             raise RuntimeError("Reset did not succeed")
+        # A full POR-equivalent reset needs its own settle wait, without this a caller
+        # reading cell_voltage immediately after construction silently gets the
+        # uninitialized-register sentinel (0V) instead of a real reading, because
+        # VCELL/SOC aren't valid until tPOR_MAX has elapsed. Fixes Issue #16.
+        time.sleep(_MAX1704X_TPOR_MAX)
         for _ in range(3):
             try:
                 self.reset_alert = False  # clean up RI alert
@@ -151,11 +172,14 @@ class MAX17048:
         """The voltage that will determine whether the chip will consider it a reset/swap"""
         return self._reset_voltage * 0.04  # 40mV / LSB
 
+    # int() truncates toward zero (asymmetric, up to 1 LSB low); round() matches the intended
+    # nearest-code encoding. All following setters now use round vs int
+
     @reset_voltage.setter
     def reset_voltage(self, reset_v: float) -> None:
         if not 0 <= reset_v <= (127 * 0.04):
             raise ValueError("Reset voltage must be between 0 and 5.1 Volts")
-        self._reset_voltage = int(reset_v / 0.04)  # 40mV / LSB
+        self._reset_voltage = round(reset_v / 0.04)  # 40mV / LSB
 
     @property
     def voltage_alert_min(self) -> float:
@@ -166,7 +190,7 @@ class MAX17048:
     def voltage_alert_min(self, minvoltage: float) -> None:
         if not 0 <= minvoltage <= (255 * 0.02):
             raise ValueError("Alert voltage must be between 0 and 5.1 Volts")
-        self._valrt_min = int(minvoltage / 0.02)  # 20mV / LSB
+        self._valrt_min = round(minvoltage / 0.02)  # 20mV / LSB
 
     @property
     def voltage_alert_max(self) -> float:
@@ -177,7 +201,7 @@ class MAX17048:
     def voltage_alert_max(self, maxvoltage: float) -> None:
         if not 0 <= maxvoltage <= (255 * 0.02):
             raise ValueError("Alert voltage must be between 0 and 5.1 Volts")
-        self._valrt_max = int(maxvoltage / 0.02)  # 20mV / LSB
+        self._valrt_max = round(maxvoltage / 0.02)  # 20mV / LSB
 
     @property
     def active_alert(self) -> bool:
@@ -198,7 +222,7 @@ class MAX17048:
     def activity_threshold(self, threshold_voltage: float) -> None:
         if not 0 <= threshold_voltage <= (255 * 0.00125):
             raise ValueError("Activity voltage change must be between 0 and 0.31875 Volts")
-        self._hibrt_actthr = int(threshold_voltage / 0.00125)  # 1.25mV per LSB
+        self._hibrt_actthr = round(threshold_voltage / 0.00125)  # 1.25mV per LSB
 
     @property
     def hibernation_threshold(self) -> float:
@@ -210,7 +234,7 @@ class MAX17048:
     def hibernation_threshold(self, threshold_percent: float) -> None:
         if not 0 <= threshold_percent <= (255 * 0.208):
             raise ValueError("Activity percentage/hour change must be between 0 and 53%")
-        self._hibrt_hibthr = int(threshold_percent / 0.208)  # 0.208% per hour
+        self._hibrt_hibthr = round(threshold_percent / 0.208)  # 0.208% per hour
 
     def hibernate(self) -> None:
         """Setup thresholds for hibernation to go into hibernation mode immediately.
