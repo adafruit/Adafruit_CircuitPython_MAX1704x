@@ -88,9 +88,6 @@ class MAX17048:
 
     _config = ROUnaryStruct(_MAX1704X_CONFIG_REG, ">H")
     # expose the config bits
-    # The datasheet requires all registers be written as full 16-bit words --
-    # "8-bit writes cause no effect". The original code anchored at CONFIG_REG + 1
-    # instead of CONFIG_REG, landing one byte past the real register (0x0E).
     sleep = RWBit(_MAX1704X_CONFIG_REG, 7, register_width=2, lsb_first=False)
     _alert_status = RWBit(_MAX1704X_CONFIG_REG, 5, register_width=2, lsb_first=False)
     enable_sleep = RWBit(_MAX1704X_MODE_REG, 5)
