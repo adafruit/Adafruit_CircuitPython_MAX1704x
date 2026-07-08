@@ -58,9 +58,7 @@ _MAX1704X_CHIPID_REG = const(0x19)
 _MAX1704X_STATUS_REG = const(0x1A)
 _MAX1704X_CMD_REG = const(0xFE)
 
-# Issue #16 fix
-# Datasheet 19-6171 Rev 7, timings: after a full POR-equivalent reset (CMD=0x5400),
-# the IC needs up to 17ms (OCV ready) + 175ms (SOC ready) = 192ms worst-case before
+# IC needs up to 17ms (OCV ready) + 175ms (SOC ready) = 192ms worst-case before
 # VCELL/SOC reflect a real measurement rather than the power-on sentinel. See reset().
 _MAX1704X_TPOR_MAX = 0.192
 
@@ -134,10 +132,8 @@ class MAX17048:
             pass
         else:
             raise RuntimeError("Reset did not succeed")
-        # A full POR-equivalent reset needs its own settle wait, without this a caller
-        # reading cell_voltage immediately after construction silently gets the
-        # uninitialized-register sentinel (0V) instead of a real reading, because
-        # VCELL/SOC aren't valid until tPOR_MAX has elapsed. Fixes Issue #16.
+        # A full POR-equivalent reset needs its own settle wait of tPOR-MAX or
+        # incorrect 0V sentinel returned on immediate read after reset
         time.sleep(_MAX1704X_TPOR_MAX)
         for _ in range(3):
             try:
@@ -169,8 +165,7 @@ class MAX17048:
         """The voltage that will determine whether the chip will consider it a reset/swap"""
         return self._reset_voltage * 0.04  # 40mV / LSB
 
-    # int() truncates toward zero (asymmetric, up to 1 LSB low); round() matches the intended
-    # nearest-code encoding. All following setters now use round vs int
+    # All following setters use round for nearest-value encoding.
 
     @reset_voltage.setter
     def reset_voltage(self, reset_v: float) -> None:
