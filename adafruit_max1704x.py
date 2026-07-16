@@ -58,9 +58,11 @@ _MAX1704X_CHIPID_REG = const(0x19)
 _MAX1704X_STATUS_REG = const(0x1A)
 _MAX1704X_CMD_REG = const(0xFE)
 
-# IC needs up to 17ms (OCV ready) + 175ms (SOC ready) = 192ms worst-case before
-# VCELL/SOC reflect a real measurement rather than the power-on sentinel. See reset().
-_MAX1704X_TPOR_MAX = 0.192
+# Post-reset wait before VCELL/SOC reads are trusted. Datasheet debounce figures
+# (nominal, no min/max given): OCV ready 17ms after POR, SOC ready 175ms later
+# Pre-seed sentinel is 0x0000, indistinguishable from a dead cell, hence
+# the conservative figure. See reset().
+_MAX1704X_RESET_SOC_READY = 0.192
 
 ALERTFLAG_SOC_CHANGE = 0x20
 ALERTFLAG_SOC_LOW = 0x10
@@ -77,11 +79,8 @@ class MAX17048:
     """
 
     chip_version = ROUnaryStruct(_MAX1704X_VERSION_REG, ">H")
-    # This is the factory-programmed, one-time-provisioned lot/production ID (datasheet
-    # ID field, low byte of the VRESET/ID register at 0x19) -- NOT a chip/part-number
-    # identifier. It does not distinguish MAX17048 from MAX17049 and should not be used
-    # as a "device present and correct" check; chip_version's masked comparison in
-    # __init__ already serves that purpose.
+    # This is the factory-programmed, one-time-provisioned lot/production ID (NOT a
+    # chip/part-number identifier. It does not distinguish MAX17048 from MAX17049
     chip_id = ROUnaryStruct(_MAX1704X_CHIPID_REG, ">B")
 
     _config = ROUnaryStruct(_MAX1704X_CONFIG_REG, ">H")
@@ -132,9 +131,8 @@ class MAX17048:
             pass
         else:
             raise RuntimeError("Reset did not succeed")
-        # A full POR-equivalent reset needs its own settle wait of tPOR-MAX or
-        # incorrect 0V sentinel returned on immediate read after reset
-        time.sleep(_MAX1704X_TPOR_MAX)
+        # A reset needs settle time or an incorrect 0V sentinel returned
+        time.sleep(_MAX1704X_RESET_SOC_READY)
         for _ in range(3):
             try:
                 self.reset_alert = False  # clean up RI alert
