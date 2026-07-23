@@ -79,7 +79,7 @@ class MAX17048:
     """
 
     chip_version = ROUnaryStruct(_MAX1704X_VERSION_REG, ">H")
-    # This is the factory-programmed, one-time-provisioned lot/production ID (NOT a
+    # This is the factory-programmed, one-time-provisioned lot/production ID, NOT a
     # chip/part-number identifier. It does not distinguish MAX17048 from MAX17049
     chip_id = ROUnaryStruct(_MAX1704X_CHIPID_REG, ">B")
 
