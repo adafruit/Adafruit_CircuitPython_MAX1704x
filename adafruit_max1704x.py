@@ -27,6 +27,8 @@ Implementation Notes
 * Adafruit's Register library: https://github.com/adafruit/Adafruit_CircuitPython_Register
 """
 
+import time
+
 from adafruit_bus_device import i2c_device
 from adafruit_register.i2c_bit import ROBit, RWBit
 from adafruit_register.i2c_bits import RWBits
@@ -56,6 +58,12 @@ _MAX1704X_CHIPID_REG = const(0x19)
 _MAX1704X_STATUS_REG = const(0x1A)
 _MAX1704X_CMD_REG = const(0xFE)
 
+# Post-reset wait before VCELL/SOC reads are trusted. Datasheet debounce figures
+# (nominal, no min/max given): OCV ready 17ms after POR, SOC ready 175ms later
+# Pre-seed sentinel is 0x0000, indistinguishable from a dead cell, hence
+# the conservative figure. See reset().
+_MAX1704X_RESET_SOC_READY = 0.192
+
 ALERTFLAG_SOC_CHANGE = 0x20
 ALERTFLAG_SOC_LOW = 0x10
 ALERTFLAG_VOLTAGE_RESET = 0x08
@@ -71,12 +79,14 @@ class MAX17048:
     """
 
     chip_version = ROUnaryStruct(_MAX1704X_VERSION_REG, ">H")
+    # This is the factory-programmed, one-time-provisioned lot/production ID, NOT a
+    # chip/part-number identifier. It does not distinguish MAX17048 from MAX17049
     chip_id = ROUnaryStruct(_MAX1704X_CHIPID_REG, ">B")
 
     _config = ROUnaryStruct(_MAX1704X_CONFIG_REG, ">H")
     # expose the config bits
-    sleep = RWBit(_MAX1704X_CONFIG_REG + 1, 7, register_width=2, lsb_first=False)
-    _alert_status = RWBit(_MAX1704X_CONFIG_REG + 1, 5, register_width=2, lsb_first=False)
+    sleep = RWBit(_MAX1704X_CONFIG_REG, 7, register_width=2, lsb_first=False)
+    _alert_status = RWBit(_MAX1704X_CONFIG_REG, 5, register_width=2, lsb_first=False)
     enable_sleep = RWBit(_MAX1704X_MODE_REG, 5)
     hibernating = ROBit(_MAX1704X_MODE_REG, 4)
     quick_start = RWBit(_MAX1704X_MODE_REG, 6)
@@ -121,6 +131,8 @@ class MAX17048:
             pass
         else:
             raise RuntimeError("Reset did not succeed")
+        # A reset needs settle time or an incorrect 0V sentinel returned
+        time.sleep(_MAX1704X_RESET_SOC_READY)
         for _ in range(3):
             try:
                 self.reset_alert = False  # clean up RI alert
@@ -151,11 +163,13 @@ class MAX17048:
         """The voltage that will determine whether the chip will consider it a reset/swap"""
         return self._reset_voltage * 0.04  # 40mV / LSB
 
+    # All following setters use round for nearest-value encoding.
+
     @reset_voltage.setter
     def reset_voltage(self, reset_v: float) -> None:
         if not 0 <= reset_v <= (127 * 0.04):
             raise ValueError("Reset voltage must be between 0 and 5.1 Volts")
-        self._reset_voltage = int(reset_v / 0.04)  # 40mV / LSB
+        self._reset_voltage = round(reset_v / 0.04)  # 40mV / LSB
 
     @property
     def voltage_alert_min(self) -> float:
@@ -166,7 +180,7 @@ class MAX17048:
     def voltage_alert_min(self, minvoltage: float) -> None:
         if not 0 <= minvoltage <= (255 * 0.02):
             raise ValueError("Alert voltage must be between 0 and 5.1 Volts")
-        self._valrt_min = int(minvoltage / 0.02)  # 20mV / LSB
+        self._valrt_min = round(minvoltage / 0.02)  # 20mV / LSB
 
     @property
     def voltage_alert_max(self) -> float:
@@ -177,7 +191,7 @@ class MAX17048:
     def voltage_alert_max(self, maxvoltage: float) -> None:
         if not 0 <= maxvoltage <= (255 * 0.02):
             raise ValueError("Alert voltage must be between 0 and 5.1 Volts")
-        self._valrt_max = int(maxvoltage / 0.02)  # 20mV / LSB
+        self._valrt_max = round(maxvoltage / 0.02)  # 20mV / LSB
 
     @property
     def active_alert(self) -> bool:
@@ -198,7 +212,7 @@ class MAX17048:
     def activity_threshold(self, threshold_voltage: float) -> None:
         if not 0 <= threshold_voltage <= (255 * 0.00125):
             raise ValueError("Activity voltage change must be between 0 and 0.31875 Volts")
-        self._hibrt_actthr = int(threshold_voltage / 0.00125)  # 1.25mV per LSB
+        self._hibrt_actthr = round(threshold_voltage / 0.00125)  # 1.25mV per LSB
 
     @property
     def hibernation_threshold(self) -> float:
@@ -210,7 +224,7 @@ class MAX17048:
     def hibernation_threshold(self, threshold_percent: float) -> None:
         if not 0 <= threshold_percent <= (255 * 0.208):
             raise ValueError("Activity percentage/hour change must be between 0 and 53%")
-        self._hibrt_hibthr = int(threshold_percent / 0.208)  # 0.208% per hour
+        self._hibrt_hibthr = round(threshold_percent / 0.208)  # 0.208% per hour
 
     def hibernate(self) -> None:
         """Setup thresholds for hibernation to go into hibernation mode immediately.
